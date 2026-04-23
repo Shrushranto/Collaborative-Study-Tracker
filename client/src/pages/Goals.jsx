@@ -64,40 +64,35 @@ export default function Goals() {
         </p>
       </div>
 
-      {!loading && goals.length === 0 && (
-        <div className="card">
-          <h3 className="card-title">Create a goal</h3>
-          <p className="muted text-sm" style={{ marginBottom: 16 }}>
-            You can have one active goal at a time. Delete it to set a new one.
-          </p>
-          <form onSubmit={handleCreate}>
-            <div className="form-group">
-              <label>Goal title</label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Master Calculus, Pass MCAT"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Target hours</label>
-              <input
-                type="number"
-                min="1"
-                value={targetHours}
-                onChange={(e) => setTargetHours(e.target.value)}
-                placeholder="e.g. 100"
-                required
-              />
-            </div>
-            {error && <div className="error">{error}</div>}
-            <button type="submit" disabled={creating}>
-              {creating ? 'Creating…' : 'Add goal'}
-            </button>
-          </form>
-        </div>
-      )}
+      <div className="card">
+        <h3 className="card-title">Create a new goal</h3>
+        <form onSubmit={handleCreate}>
+          <div className="form-group">
+            <label>Goal title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Master Calculus, Pass MCAT"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Target hours</label>
+            <input
+              type="number"
+              min="1"
+              value={targetHours}
+              onChange={(e) => setTargetHours(e.target.value)}
+              placeholder="e.g. 100"
+              required
+            />
+          </div>
+          {error && <div className="error">{error}</div>}
+          <button type="submit" disabled={creating}>
+            {creating ? 'Creating…' : 'Add goal'}
+          </button>
+        </form>
+      </div>
 
       <div className="section-grid">
         {loading ? (

@@ -11,11 +11,50 @@ function rankBadge(rank) {
   return `#${rank}`;
 }
 
+function TierBlock({ tier, user }) {
+  return (
+    <div className="tier">
+      <div className="tier-header">
+        <h4 style={{ margin: 0 }}>{tier.targetHours}h goal</h4>
+        <span className="muted text-sm">
+          {tier.memberCount} {tier.memberCount === 1 ? 'member' : 'members'}
+        </span>
+      </div>
+      <div className="mt-2">
+        {tier.members.map((m) => (
+          <Link
+            to={`/users/${m._id}`}
+            key={`${tier.targetHours}-${m._id}-${m.goalId}`}
+            className={`leaderboard-row ${user && String(m._id) === String(user._id) ? 'me' : ''}`}
+          >
+            <div className="hstack">
+              <span className="rank">{rankBadge(m.rank)}</span>
+              <Avatar name={m.name} avatar={m.avatar} size="sm" />
+              <div>
+                <div>{m.name}</div>
+                <div className="muted text-sm">{m.goalTitle}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="progress-bar" style={{ width: 80, marginBottom: 4 }}>
+                <div className="progress-bar-fill" style={{ width: `${m.progressPercent}%` }} />
+              </div>
+              <strong>{m.goalHours} / {tier.targetHours}h</strong>
+              <div className="muted text-sm">{m.progressPercent}%</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Leaderboard({ refreshKey }) {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [view, setView] = useState('tiers');
+  const [showOtherTiers, setShowOtherTiers] = useState(false);
 
   useEffect(() => {
     api
@@ -29,6 +68,11 @@ export default function Leaderboard({ refreshKey }) {
 
   const top3 = data.global.filter(p => p.rank <= 3);
   const rest = data.global.filter(p => p.rank > 3);
+
+  // tiers already sorted by targetHours descending from backend
+  const myTiers = data.tiers.filter(t => t.members.some(m => user && String(m._id) === String(user._id)));
+  const primaryTier = myTiers[0] || null;
+  const otherTiers = myTiers.slice(1);
 
   return (
     <div className="card">
@@ -52,57 +96,32 @@ export default function Leaderboard({ refreshKey }) {
 
       {view === 'tiers' && (
         <div className="mt-4">
-          {(() => {
-            const myTiers = data.tiers.filter(t => t.members.some(m => user && m._id === user._id));
-            if (myTiers.length === 0) return (
-              <div className="empty-state">
-                <div className="empty-state-icon">🏅</div>
-                <p className="empty-state-title">No goals yet</p>
-                <p className="empty-state-sub">Create a goal to start competing!</p>
-                <Link to="/goals"><button className="secondary" style={{ marginTop: 12 }}>Create a goal →</button></Link>
-              </div>
-            );
-            return myTiers.map((tier) => (
-              <div key={tier.targetHours} className="tier">
-                <div className="tier-header">
-                  <h4 style={{ margin: 0 }}>{tier.targetHours} hr goal</h4>
-                  <span className="muted text-sm">
-                    {tier.memberCount} {tier.memberCount === 1 ? 'member' : 'members'} · {tier.groupTotalHours} / {tier.groupGoalHours} hrs
-                  </span>
-                </div>
-                <div className="progress-bar">
-                  <div
-                    className="progress-bar-fill"
-                    style={{
-                      width: `${Math.min(100, (tier.groupTotalHours / tier.groupGoalHours) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <div className="mt-2">
-                  {tier.members.map((m) => (
-                    <Link
-                      to={`/users/${m._id}`}
-                      key={`${tier.targetHours}-${m._id}-${m.goalId}`}
-                      className={`leaderboard-row ${user && m._id === user._id ? 'me' : ''}`}
-                    >
-                      <div className="hstack">
-                        <span className="rank">{rankBadge(m.rank)}</span>
-                        <Avatar name={m.name} avatar={m.avatar} size="sm" />
-                        <div>
-                          <div>{m.name}</div>
-                          <div className="muted text-sm">{m.goalTitle}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <strong>{m.totalHours} hrs</strong>
-                        <div className="muted text-sm">{m.progressPercent}%</div>
-                      </div>
-                    </Link>
+          {!primaryTier ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">🏅</div>
+              <p className="empty-state-title">No goals yet</p>
+              <p className="empty-state-sub">Create a goal to start competing!</p>
+              <Link to="/goals"><button className="secondary" style={{ marginTop: 12 }}>Create a goal →</button></Link>
+            </div>
+          ) : (
+            <>
+              <TierBlock tier={primaryTier} user={user} />
+              {otherTiers.length > 0 && (
+                <>
+                  <button
+                    className="secondary"
+                    style={{ width: '100%', marginTop: 10 }}
+                    onClick={() => setShowOtherTiers(v => !v)}
+                  >
+                    {showOtherTiers ? 'Hide other goals ▲' : `Show ${otherTiers.length} more goal${otherTiers.length > 1 ? 's' : ''} ▼`}
+                  </button>
+                  {showOtherTiers && otherTiers.map(t => (
+                    <TierBlock key={t.targetHours} tier={t} user={user} />
                   ))}
-                </div>
-              </div>
-            ));
-          })()}
+                </>
+              )}
+            </>
+          )}
         </div>
       )}
 

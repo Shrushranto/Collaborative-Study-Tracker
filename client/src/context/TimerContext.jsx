@@ -10,6 +10,7 @@ export function TimerProvider({ children }) {
   const [running, setRunning] = useState(false);
   const [subject, setSubject] = useState('');
   const [notes, setNotes] = useState('');
+  const [goalId, setGoalId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [targetSeconds, setTargetSeconds] = useState(0);
@@ -20,9 +21,8 @@ export function TimerProvider({ children }) {
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (!raw) return;
-      const { seconds: s, running: r, subject: sub, notes: n, startedAt: sa, targetSeconds: ts } = JSON.parse(raw);
+      const { seconds: s, running: r, subject: sub, notes: n, goalId: gi, startedAt: sa, targetSeconds: ts } = JSON.parse(raw);
       if (r && sa) {
-        // Add time elapsed while app was closed/navigated away
         const elapsed = Math.floor((Date.now() - new Date(sa).getTime()) / 1000);
         setSeconds((s || 0) + elapsed);
         startedAtRef.current = new Date(sa);
@@ -33,6 +33,7 @@ export function TimerProvider({ children }) {
       }
       setSubject(sub || '');
       setNotes(n || '');
+      setGoalId(gi || '');
       setTargetSeconds(ts || 0);
     } catch { /* ignore parse errors */ }
   }, []);
@@ -44,10 +45,11 @@ export function TimerProvider({ children }) {
       running,
       subject,
       notes,
+      goalId,
       startedAt: startedAtRef.current,
       targetSeconds,
     }));
-  }, [seconds, running, subject, notes, targetSeconds]);
+  }, [seconds, running, subject, notes, goalId, targetSeconds]);
 
   // Run the interval at context level so it survives navigation
   useEffect(() => {
@@ -72,6 +74,7 @@ export function TimerProvider({ children }) {
     startedAtRef.current = null;
     setSubject('');
     setNotes('');
+    setGoalId('');
     setError('');
     setTargetSeconds(0);
     localStorage.removeItem(LS_KEY);
@@ -89,6 +92,7 @@ export function TimerProvider({ children }) {
         durationSeconds: seconds,
         subject,
         notes,
+        goalId: goalId || undefined,
         startedAt: startedAtRef.current,
         endedAt: new Date(),
       });
@@ -103,8 +107,8 @@ export function TimerProvider({ children }) {
 
   return (
     <TimerContext.Provider value={{
-      seconds, running, subject, notes, saving, error, targetSeconds,
-      setSubject, setNotes, setError, setTargetSeconds,
+      seconds, running, subject, notes, goalId, saving, error, targetSeconds,
+      setSubject, setNotes, setGoalId, setError, setTargetSeconds,
       start, pause, reset, save,
     }}>
       {children}

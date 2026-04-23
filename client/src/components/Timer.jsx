@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTimer } from '../context/TimerContext.jsx';
 import { FocusPetPortal } from './FocusPet.jsx';
+import api from '../api/axios.js';
 
 const POMODORO_PRESETS = [
   { label: '25 min', seconds: 25 * 60 },
@@ -43,12 +44,17 @@ function isFullscreen() {
 
 export default function Timer({ onSessionSaved }) {
   const {
-    seconds, running, subject, notes, saving, error, targetSeconds,
-    setSubject, setNotes, setTargetSeconds,
+    seconds, running, subject, notes, goalId, saving, error, targetSeconds,
+    setSubject, setNotes, setGoalId, setTargetSeconds,
     start, pause, reset, save,
   } = useTimer();
 
   const [focusMode, setFocusMode] = useState(false);
+  const [goals, setGoals] = useState([]);
+
+  useEffect(() => {
+    api.get('/goals/me').then(res => setGoals(res.data.goals || [])).catch(() => {});
+  }, []);
 
   function openFocus() {
     setFocusMode(true);
@@ -140,6 +146,17 @@ export default function Timer({ onSessionSaved }) {
             placeholder="What did you study? What clicked? What was hard?"
           />
         </div>
+        {goals.length > 0 && (
+          <div className="form-group">
+            <label>Save toward goal <span className="muted text-xs">(optional)</span></label>
+            <select value={goalId} onChange={(e) => setGoalId(e.target.value)}>
+              <option value="">— No goal —</option>
+              {goals.map(g => (
+                <option key={g._id} value={g._id}>{g.title} ({g.targetHours}h)</option>
+              ))}
+            </select>
+          </div>
+        )}
         {error && <div className="error">{error}</div>}
         <button onClick={() => save(onSessionSaved)} disabled={saving || seconds < 1} style={{ width: '100%' }}>
           {saving ? 'Saving…' : 'Save session'}

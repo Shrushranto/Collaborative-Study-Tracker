@@ -2,41 +2,49 @@ import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Goal from '../models/Goal.js';
 import StudySession from '../models/StudySession.js';
+import { Types } from 'mongoose';
 
 export async function leaderboard(req, res) {
-  // Group users by goal target hours; if a user has multiple goals, they appear in each tier.
-  const goals = await Goal.find().populate('user', 'name email totalSeconds').lean();
+  const goals = await Goal.find().populate('user', 'name email avatar').lean();
+
+  // Aggregate per-goal session totals
+  const goalIds = goals.map(g => g._id);
+  const sessionTotals = await StudySession.aggregate([
+    { $match: { goal: { $in: goalIds } } },
+    { $group: { _id: '$goal', totalSeconds: { $sum: '$durationSeconds' } } },
+  ]);
+  const sessionMap = {};
+  for (const s of sessionTotals) sessionMap[String(s._id)] = s.totalSeconds;
 
   const tiersMap = new Map();
   for (const g of goals) {
     if (!g.user) continue;
+    const goalSeconds = sessionMap[String(g._id)] || 0;
     const key = g.targetHours;
     if (!tiersMap.has(key)) tiersMap.set(key, []);
     tiersMap.get(key).push({
       _id: g.user._id,
       name: g.user.name,
-      totalSeconds: g.user.totalSeconds || 0,
-      totalHours: +(((g.user.totalSeconds || 0) / 3600).toFixed(2)),
+      avatar: g.user.avatar || '',
+      goalSeconds,
+      goalHours: +(goalSeconds / 3600).toFixed(2),
       goalTitle: g.title,
       goalId: g._id,
     });
   }
 
   const tiers = [...tiersMap.entries()]
-    .sort((a, b) => a[0] - b[0])
+    .sort((a, b) => b[0] - a[0])
     .map(([targetHours, members]) => {
-      const sorted = members.sort((a, b) => b.totalSeconds - a.totalSeconds);
+      const sorted = members.sort((a, b) => b.goalSeconds - a.goalSeconds);
       const ranked = sorted.map((m, i) => ({
         ...m,
         rank: i + 1,
-        progressPercent: +Math.min(100, (m.totalSeconds / (targetHours * 3600)) * 100).toFixed(2),
+        progressPercent: +Math.min(100, (m.goalSeconds / (targetHours * 3600)) * 100).toFixed(2),
       }));
-      const groupTotal = sorted.reduce((s, m) => s + m.totalSeconds, 0);
       return {
         targetHours,
         memberCount: ranked.length,
-        groupTotalHours: +((groupTotal / 3600).toFixed(2)),
-        groupGoalHours: targetHours * ranked.length,
         members: ranked,
       };
     });

@@ -3,7 +3,7 @@ import StudySession from '../models/StudySession.js';
 import User from '../models/User.js';
 
 export async function createSession(req, res) {
-  const { durationSeconds, subject, notes, startedAt, endedAt } = req.body;
+  const { durationSeconds, subject, notes, startedAt, endedAt, goalId } = req.body;
   const seconds = Number(durationSeconds);
 
   if (!seconds || seconds < 1) {
@@ -12,8 +12,16 @@ export async function createSession(req, res) {
   const start = startedAt ? new Date(startedAt) : new Date(Date.now() - seconds * 1000);
   const end = endedAt ? new Date(endedAt) : new Date();
 
+  let resolvedGoal = null;
+  if (goalId) {
+    const Goal = (await import('../models/Goal.js')).default;
+    const goal = await Goal.findOne({ _id: goalId, user: req.user._id });
+    if (goal) resolvedGoal = goal._id;
+  }
+
   const session = await StudySession.create({
     user: req.user._id,
+    goal: resolvedGoal,
     durationSeconds: seconds,
     subject: subject || '',
     notes: notes || '',
