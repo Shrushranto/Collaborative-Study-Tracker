@@ -443,29 +443,7 @@ textarea { resize: vertical; min-height: 80px; }
 }
 .tier-meta { color: var(--text-muted); font-size: 0.8rem; }
 
-.leaderboard-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-}
-.leaderboard-row .rank {
-  font-weight: 700;
-  color: var(--text-muted);
-  width: 28px;
-  font-size: 0.875rem;
-  text-align: center;
-}
-.leaderboard-row.me {
-  background: var(--accent-soft);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  margin: 0 -12px;
-}
-.leaderboard-row .name { flex: 1; font-weight: 500; font-size: 0.9rem; }
-.leaderboard-row .name a { color: var(--text); }
-.leaderboard-row .name a:hover { color: var(--accent); }
-.leaderboard-row .hours { font-weight: 600; font-size: 0.875rem; }
+
 
 .medal { font-size: 1rem; }
 
@@ -869,17 +847,40 @@ h3 { font-size: 1rem; letter-spacing: -0.01em; }
 }
 
 /* ---------- Leaderboard rows as links ---------- */
-a.leaderboard-row {
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   text-decoration: none;
   color: var(--text);
-  justify-content: space-between;
   border-radius: var(--radius);
   padding: 10px 12px;
-  transition: background 0.15s;
+  margin-bottom: 8px; /* Adds gap between rows so backgrounds don't overlap */
+  background: var(--bg-elevated); /* Explicit base background if needed */
+  transition: background 0.15s, box-shadow 0.15s;
+  gap: 12px;
 }
-a.leaderboard-row:hover { background: var(--bg-hover); color: var(--text); }
-a.leaderboard-row.me { background: var(--accent-soft); }
-a.leaderboard-row.me:hover { background: var(--accent-soft); }
+.leaderboard-row:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.leaderboard-row.me {
+  background: var(--accent-soft);
+}
+.leaderboard-row.me:hover {
+  background: var(--accent-soft);
+}
+.leaderboard-row .rank {
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 28px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+.leaderboard-row .name { flex: 1; font-weight: 500; font-size: 0.9rem; }
+.leaderboard-row .name a { color: var(--text); }
+.leaderboard-row .name a:hover { color: var(--accent); }
+.leaderboard-row .hours { font-weight: 600; font-size: 0.875rem; }
 
 .tier { margin-bottom: 24px; }
 .tier:last-child { margin-bottom: 0; }
@@ -1771,6 +1772,16 @@ a.people-card { color: var(--text); text-decoration: none; }
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   font-weight: 600;
+}
+.conv-section-label {
+  padding: 8px 16px 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
 }
 .conversation-item {
   display: flex;
@@ -3066,25 +3077,7 @@ html[data-theme="dark"] .podium-card.rank-3 {
 .rank-2 .podium-step { background: #94a3b8; }
 .rank-3 .podium-step { background: #fb923c; }
 
-/* Leaderboard rows (below the podium) */
-.leaderboard-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  transition: background 0.15s;
-  color: var(--text);
-  gap: 12px;
-}
-.leaderboard-row:hover { background: var(--bg-hover); }
-.leaderboard-row.me { background: var(--accent-soft); }
-.leaderboard-row .rank {
-  font-weight: 700;
-  font-size: 0.95rem;
-  min-width: 32px;
-  color: var(--text-muted);
-}
+
 
 /* ═══════════════════════════════════════
    UI-03 — Streak Badge

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios.js';
 import Avatar from '../components/Avatar.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { loadPrivateKey, importPublicKey, deriveSharedKey, encryptMessage, decryptMessage } from '../utils/crypto.js';
 
 function formatTime(iso) {
@@ -16,7 +17,9 @@ function formatTime(iso) {
 export default function Messages() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const { user: me } = useAuth();
   const [conversations, setConversations] = useState(null);
+  const [following, setFollowing] = useState([]);
   const [thread, setThread] = useState(null);
   const [threadError, setThreadError] = useState('');
   const [text, setText] = useState('');
@@ -27,12 +30,10 @@ export default function Messages() {
   const [sharedKey, setSharedKey] = useState(null);
   const [decryptedMessages, setDecryptedMessages] = useState({});
 
-  // Load conversation list
+  // Load conversation list + following list
   async function loadConversations() {
     try {
       const res = await api.get('/messages');
-      // For conversations, we aren't deriving all shared keys to decrypt last messages,
-      // we'll just show "Encrypted Message" if it's encrypted.
       setConversations(res.data.conversations);
     } catch (err) {
       console.error(err);
@@ -44,6 +45,13 @@ export default function Messages() {
     const id = setInterval(loadConversations, 15000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!me?._id) return;
+    api.get(`/users/${me._id}/following`)
+      .then(res => setFollowing(res.data.users || []))
+      .catch(() => {});
+  }, [me?._id]);
 
   // Load active thread
   useEffect(() => {
@@ -168,33 +176,63 @@ export default function Messages() {
       <h2 style={{ marginBottom: 16 }}>Messages</h2>
       <div className={`messages-layout ${userId ? 'has-active' : ''}`}>
         <div className="conversations-pane">
-          <div className="conversations-header">Conversations</div>
+          <div className="conversations-header">Messages</div>
           {!conversations && <p className="muted" style={{ padding: 16 }}>Loading…</p>}
-          {conversations && conversations.length === 0 && (
-            <div className="muted" style={{ padding: 16 }}>
-              No conversations yet. Follow someone who follows you back to start chatting.
-              <div style={{ marginTop: 12 }}>
-                <Link to="/people"><button className="sm">Find people</button></Link>
-              </div>
-            </div>
-          )}
-          {conversations && conversations.map((c) => (
-            <button
-              key={c.user._id}
-              className={`conversation-item ${userId === c.user._id ? 'active' : ''} ${c.unread > 0 ? 'unread' : ''}`}
-              onClick={() => navigate(`/messages/${c.user._id}`)}
-            >
-              <Avatar name={c.user.name} avatar={c.user.avatar} size="md" />
-              <div className="conv-info">
-                <div className="conv-name">{c.user.name}</div>
-                <div className="conv-preview">
-                  {c.lastMessage.mine && 'You: '}
-                  {c.lastMessage.encrypted ? '🔒 Encrypted Message' : c.lastMessage.text}
+
+          {conversations && (() => {
+            const convIds = new Set(conversations.map(c => String(c.user._id)));
+            const newChats = following.filter(f => !convIds.has(String(f._id)));
+
+            if (conversations.length === 0 && newChats.length === 0) return (
+              <div className="muted" style={{ padding: 16 }}>
+                No conversations yet. Follow someone to start chatting.
+                <div style={{ marginTop: 12 }}>
+                  <Link to="/people"><button className="sm">Find people</button></Link>
                 </div>
               </div>
-              {c.unread > 0 && <span className="conv-unread-dot" aria-label={`${c.unread} unread`} />}
-            </button>
-          ))}
+            );
+
+            return (
+              <>
+                {conversations.map((c) => (
+                  <button
+                    key={c.user._id}
+                    className={`conversation-item ${String(userId) === String(c.user._id) ? 'active' : ''} ${c.unread > 0 ? 'unread' : ''}`}
+                    onClick={() => navigate(`/messages/${c.user._id}`)}
+                  >
+                    <Avatar name={c.user.name} avatar={c.user.avatar} size="md" />
+                    <div className="conv-info">
+                      <div className="conv-name">{c.user.name}</div>
+                      <div className="conv-preview">
+                        {c.lastMessage.mine && 'You: '}
+                        {c.lastMessage.encrypted ? '🔒 Encrypted Message' : c.lastMessage.text}
+                      </div>
+                    </div>
+                    {c.unread > 0 && <span className="conv-unread-dot" aria-label={`${c.unread} unread`} />}
+                  </button>
+                ))}
+
+                {newChats.length > 0 && (
+                  <>
+                    {conversations.length > 0 && <div className="conv-section-label">Following</div>}
+                    {newChats.map((f) => (
+                      <button
+                        key={f._id}
+                        className={`conversation-item ${String(userId) === String(f._id) ? 'active' : ''}`}
+                        onClick={() => navigate(`/messages/${f._id}`)}
+                      >
+                        <Avatar name={f.name} avatar={f.avatar} size="md" />
+                        <div className="conv-info">
+                          <div className="conv-name">{f.name}</div>
+                          <div className="conv-preview muted">Start a conversation</div>
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <div className="chat-pane">
