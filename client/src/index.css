@@ -875,7 +875,6 @@ a.leaderboard-row {
   justify-content: space-between;
   border-radius: var(--radius);
   padding: 10px 12px;
-  margin: 0 -12px;
   transition: background 0.15s;
 }
 a.leaderboard-row:hover { background: var(--bg-hover); color: var(--text); }
