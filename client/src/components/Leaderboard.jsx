@@ -52,15 +52,17 @@ export default function Leaderboard({ refreshKey }) {
 
       {view === 'tiers' && (
         <div className="mt-4">
-          {data.tiers.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">🏅</div>
-              <p className="empty-state-title">No goals yet</p>
-              <p className="empty-state-sub">Create a goal to start competing!</p>
-              <Link to="/goals"><button className="secondary" style={{ marginTop: 12 }}>Create a goal →</button></Link>
-            </div>
-          ) : (
-            data.tiers.map((tier) => (
+          {(() => {
+            const myTiers = data.tiers.filter(t => t.members.some(m => user && m._id === user._id));
+            if (myTiers.length === 0) return (
+              <div className="empty-state">
+                <div className="empty-state-icon">🏅</div>
+                <p className="empty-state-title">No goals yet</p>
+                <p className="empty-state-sub">Create a goal to start competing!</p>
+                <Link to="/goals"><button className="secondary" style={{ marginTop: 12 }}>Create a goal →</button></Link>
+              </div>
+            );
+            return myTiers.map((tier) => (
               <div key={tier.targetHours} className="tier">
                 <div className="tier-header">
                   <h4 style={{ margin: 0 }}>{tier.targetHours} hr goal</h4>
@@ -99,8 +101,8 @@ export default function Leaderboard({ refreshKey }) {
                   ))}
                 </div>
               </div>
-            ))
-          )}
+            ));
+          })()}
         </div>
       )}
 
