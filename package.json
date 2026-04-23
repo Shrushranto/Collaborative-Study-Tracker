@@ -1,0 +1,20 @@
+{
+  "name": "collaborative-study-tracker",
+  "version": "1.0.0",
+  "description": "Collaborative Study Tracker with Leaderboard — MERN stack",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install && npm install --prefix server && npm install --prefix client",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently -k -n SERVER,CLIENT -c blue,magenta \"npm run server\" \"npm run client\"",
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "docx": "^9.6.1"
+  }
+}

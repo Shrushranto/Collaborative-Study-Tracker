@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study Buddy</title>
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem('study-tracker-theme') || 'system';
+          var resolved = pref;
+          if (pref === 'system') {
+            resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.dataset.theme = resolved;
+
+          var accent = localStorage.getItem('study-tracker-accent');
+          if (accent && /^#[0-9a-fA-F]{6}$/.test(accent) && accent.toLowerCase() !== '#6366f1') {
+            document.documentElement.style.setProperty('--accent', accent);
+          }
+          var fontId = localStorage.getItem('study-tracker-font');
+          var fontMap = {
+            serif:   'Georgia, "Times New Roman", "Source Serif Pro", serif',
+            mono:    '"JetBrains Mono", "Fira Code", Menlo, Consolas, monospace',
+            rounded: '"Nunito", "Quicksand", system-ui, sans-serif'
+          };
+          if (fontId && fontMap[fontId]) {
+            document.documentElement.style.setProperty('--font-family', fontMap[fontId]);
+          }
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
