@@ -19,6 +19,11 @@ export async function createGoal(req, res) {
   const hours = Number(targetHours);
   if (hours < 1) return res.status(400).json({ message: 'targetHours must be at least 1' });
 
+  const existing = await Goal.findOne({ user: req.user._id });
+  if (existing) {
+    return res.status(400).json({ message: 'You already have an active goal. Delete it first to create a new one.' });
+  }
+
   const goal = await Goal.create({ user: req.user._id, title, targetHours: hours });
   res.status(201).json({ goal });
 }
