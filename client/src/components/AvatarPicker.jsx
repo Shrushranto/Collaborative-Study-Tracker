@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   PRESET_AVATARS,
   AVATAR_STYLES,
@@ -91,7 +92,7 @@ export default function AvatarPicker({ name, currentAvatar, onSelect, onCancel }
     setSelected('');
   }
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -214,6 +215,7 @@ export default function AvatarPicker({ name, currentAvatar, onSelect, onCancel }
           <button onClick={handleSave}>Save avatar</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
