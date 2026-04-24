@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTimer } from '../context/TimerContext.jsx';
 import { FocusPetPortal } from './FocusPet.jsx';
@@ -39,6 +39,82 @@ function isFullscreen() {
     document.webkitFullscreenElement ||
     document.mozFullScreenElement ||
     document.msFullscreenElement
+  );
+}
+
+function GoalDropdown({ goals, goalId, setGoalId }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = goals.find(g => g._id === goalId) || null;
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  function pick(id) {
+    setGoalId(id);
+    setOpen(false);
+  }
+
+  return (
+    <div className="goal-dropdown" ref={ref}>
+      <button
+        type="button"
+        className={`goal-dropdown-trigger ${open ? 'open' : ''}`}
+        onClick={() => setOpen(o => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        {selected ? (
+          <span className="goal-dropdown-selected">
+            <span className="goal-dropdown-dot" />
+            <span className="goal-dropdown-label">{selected.title}</span>
+            <span className="goal-dropdown-meta">{selected.targetHours}h target</span>
+          </span>
+        ) : (
+          <span className="goal-dropdown-placeholder">No goal selected</span>
+        )}
+        <svg className="goal-dropdown-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="goal-dropdown-menu" role="listbox">
+          <div
+            className={`goal-dropdown-item none-option ${!goalId ? 'active' : ''}`}
+            role="option"
+            aria-selected={!goalId}
+            onClick={() => pick('')}
+          >
+            <span className="goal-dropdown-item-title">No goal</span>
+            <span className="goal-dropdown-item-sub">Don't link this session</span>
+          </div>
+          <div className="goal-dropdown-divider" />
+          {goals.map(g => (
+            <div
+              key={g._id}
+              className={`goal-dropdown-item ${goalId === g._id ? 'active' : ''}`}
+              role="option"
+              aria-selected={goalId === g._id}
+              onClick={() => pick(g._id)}
+            >
+              <span className="goal-dropdown-item-title">{g.title}</span>
+              <span className="goal-dropdown-item-sub">{g.targetHours}h target</span>
+              {goalId === g._id && (
+                <svg className="goal-dropdown-check" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M3 8l3.5 3.5L13 5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -149,12 +225,7 @@ export default function Timer({ onSessionSaved }) {
         {goals.length > 0 && (
           <div className="form-group">
             <label>Save toward goal <span className="muted text-xs">(optional)</span></label>
-            <select value={goalId} onChange={(e) => setGoalId(e.target.value)}>
-              <option value="">— No goal —</option>
-              {goals.map(g => (
-                <option key={g._id} value={g._id}>{g.title} ({g.targetHours}h)</option>
-              ))}
-            </select>
+            <GoalDropdown goals={goals} goalId={goalId} setGoalId={setGoalId} />
           </div>
         )}
         {error && <div className="error">{error}</div>}
