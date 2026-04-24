@@ -1,24 +1,25 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import Navbar from './components/Navbar.jsx';
-
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
-import AIChatbot from './components/AIChatbot.jsx';
 import FocusPet from './components/FocusPet.jsx';
-import Welcome from './pages/Welcome.jsx';
-import Login from './pages/Login.jsx';
-import Signup from './pages/Signup.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Goals from './pages/Goals.jsx';
-import Profile from './pages/Profile.jsx';
-import AccountSettings from './pages/AccountSettings.jsx';
-import LeaderboardPage from './pages/LeaderboardPage.jsx';
-import People from './pages/People.jsx';
-import Messages from './pages/Messages.jsx';
-import GroupSessions from './pages/GroupSessions.jsx';
-import GroupSessionRoom from './pages/GroupSessionRoom.jsx';
-import Quiz from './pages/Quiz.jsx';
-import Files from './pages/Files.jsx';
+
+const Welcome        = lazy(() => import('./pages/Welcome.jsx'));
+const Login          = lazy(() => import('./pages/Login.jsx'));
+const Signup         = lazy(() => import('./pages/Signup.jsx'));
+const Dashboard      = lazy(() => import('./pages/Dashboard.jsx'));
+const Goals          = lazy(() => import('./pages/Goals.jsx'));
+const Profile        = lazy(() => import('./pages/Profile.jsx'));
+const AccountSettings = lazy(() => import('./pages/AccountSettings.jsx'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage.jsx'));
+const People         = lazy(() => import('./pages/People.jsx'));
+const Messages       = lazy(() => import('./pages/Messages.jsx'));
+const GroupSessions  = lazy(() => import('./pages/GroupSessions.jsx'));
+const GroupSessionRoom = lazy(() => import('./pages/GroupSessionRoom.jsx'));
+const Quiz           = lazy(() => import('./pages/Quiz.jsx'));
+const Files          = lazy(() => import('./pages/Files.jsx'));
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -32,38 +33,35 @@ function PublicOnly({ children }) {
   return user ? <Navigate to="/" replace /> : children;
 }
 
-function PersistentFocusPet() {
-  return <FocusPet />;
-}
-
 export default function App() {
   const { user } = useAuth();
   return (
-    <>
+    <ErrorBoundary>
       <ToastContainer />
-      {/* <AIChatbot /> */}
-      {user && <PersistentFocusPet />}
+      {user && <FocusPet />}
       <Navbar />
 
-      <Routes>
-        <Route path="/welcome" element={<Welcome />} />
-        <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
-        <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
-        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/goals" element={<PrivateRoute><Goals /></PrivateRoute>} />
-        <Route path="/leaderboard" element={<PrivateRoute><LeaderboardPage /></PrivateRoute>} />
-        <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-        <Route path="/users/:id" element={<PrivateRoute><Profile /></PrivateRoute>} />
-        <Route path="/people" element={<PrivateRoute><People /></PrivateRoute>} />
-        <Route path="/quiz" element={<PrivateRoute><Quiz /></PrivateRoute>} />
-        <Route path="/files" element={<PrivateRoute><Files /></PrivateRoute>} />
-        <Route path="/messages" element={<PrivateRoute><Messages /></PrivateRoute>} />
-        <Route path="/messages/:userId" element={<PrivateRoute><Messages /></PrivateRoute>} />
-        <Route path="/group-sessions" element={<PrivateRoute><GroupSessions /></PrivateRoute>} />
-        <Route path="/group-sessions/:id" element={<PrivateRoute><GroupSessionRoom /></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute><AccountSettings /></PrivateRoute>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+      <Suspense fallback={<div className="container">Loading…</div>}>
+        <Routes>
+          <Route path="/welcome" element={<Welcome />} />
+          <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+          <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
+          <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/goals" element={<PrivateRoute><Goals /></PrivateRoute>} />
+          <Route path="/leaderboard" element={<PrivateRoute><LeaderboardPage /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/users/:id" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/people" element={<PrivateRoute><People /></PrivateRoute>} />
+          <Route path="/quiz" element={<PrivateRoute><Quiz /></PrivateRoute>} />
+          <Route path="/files" element={<PrivateRoute><Files /></PrivateRoute>} />
+          <Route path="/messages" element={<PrivateRoute><Messages /></PrivateRoute>} />
+          <Route path="/messages/:userId" element={<PrivateRoute><Messages /></PrivateRoute>} />
+          <Route path="/group-sessions" element={<PrivateRoute><GroupSessions /></PrivateRoute>} />
+          <Route path="/group-sessions/:id" element={<PrivateRoute><GroupSessionRoom /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><AccountSettings /></PrivateRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
