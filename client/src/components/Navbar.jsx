@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import api from '../api/axios.js';
 import Avatar from './Avatar.jsx';
 
 export default function Navbar() {
@@ -9,23 +8,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const isWelcome = !user && (location.pathname === '/welcome' || location.pathname === '/');
-  const [unread, setUnread] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
-
-  useEffect(() => {
-    if (!user) { setUnread(0); return; }
-    let cancelled = false;
-    async function poll() {
-      try {
-        const res = await api.get('/messages/unread-count');
-        if (!cancelled) setUnread(res.data.count || 0);
-      } catch {}
-    }
-    poll();
-    const id = setInterval(poll, 20000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [user]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -63,9 +47,7 @@ export default function Navbar() {
                 <NavLink to="/leaderboard" className="nav-link">Leaderboard</NavLink>
                 <NavLink to="/people" className="nav-link">People</NavLink>
                 <NavLink to="/group-sessions" className="nav-link">Groups</NavLink>
-                <NavLink to="/messages" className="nav-link">
-                  Messages{unread > 0 && <span className="nav-badge">{unread}</span>}
-                </NavLink>
+                <NavLink to="/messages" className="nav-link">Messages</NavLink>
               </nav>
               <div className="navbar-actions">
                 <Link to="/settings" className="user-chip">
@@ -97,9 +79,7 @@ export default function Navbar() {
                 <NavLink to="/leaderboard" className="mobile-nav-link" onClick={closeMenu}>Leaderboard</NavLink>
                 <NavLink to="/people" className="mobile-nav-link" onClick={closeMenu}>People</NavLink>
                 <NavLink to="/group-sessions" className="mobile-nav-link" onClick={closeMenu}>Groups</NavLink>
-                <NavLink to="/messages" className="mobile-nav-link" onClick={closeMenu}>
-                  Messages{unread > 0 && <span className="nav-badge">{unread}</span>}
-                </NavLink>
+                <NavLink to="/messages" className="mobile-nav-link" onClick={closeMenu}>Messages</NavLink>
                 <div className="mobile-menu-footer">
                   <Link to="/settings" className="user-chip" onClick={closeMenu}>
                     <Avatar user={user} size="sm" />
