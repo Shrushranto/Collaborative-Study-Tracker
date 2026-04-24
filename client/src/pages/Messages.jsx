@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios.js';
 import Avatar from '../components/Avatar.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { loadPrivateKey, importPublicKey, deriveSharedKey, encryptMessage, decryptMessage } from '../utils/crypto.js';
+import { createSocket } from '../utils/socket.js';
 
 function formatTime(iso) {
   const d = new Date(iso);
@@ -25,12 +25,12 @@ export default function Messages() {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
+  const activeUserIdRef = useRef(userId);
 
-  // E2E Keys
-  const [sharedKey, setSharedKey] = useState(null);
-  const [decryptedMessages, setDecryptedMessages] = useState({});
+  useEffect(() => {
+    activeUserIdRef.current = userId;
+  }, [userId]);
 
-  // Load conversation list + following list
   async function loadConversations() {
     try {
       const res = await api.get('/messages');
@@ -42,7 +42,7 @@ export default function Messages() {
 
   useEffect(() => {
     loadConversations();
-    const id = setInterval(loadConversations, 15000);
+    const id = setInterval(loadConversations, 30000);
     return () => clearInterval(id);
   }, []);
 
@@ -53,81 +53,43 @@ export default function Messages() {
       .catch(() => {});
   }, [me?._id]);
 
+  // Real-time socket connection
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const socket = createSocket(token);
+
+    socket.on('new_message', (msg) => {
+      const fromId = String(msg.from);
+      const activeId = activeUserIdRef.current;
+      if (activeId && fromId === activeId) {
+        setThread(prev =>
+          prev ? { ...prev, messages: [...prev.messages, msg] } : prev
+        );
+      }
+      loadConversations();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [me?._id]);
+
   // Load active thread
   useEffect(() => {
-    if (!userId) { 
-      setThread(null); 
-      setSharedKey(null);
-      setDecryptedMessages({});
-      return; 
+    if (!userId) {
+      setThread(null);
+      setThreadError('');
+      return;
     }
-    let cancelled = false;
     setThread(null);
     setThreadError('');
-    setSharedKey(null);
-    setDecryptedMessages({});
 
-    async function load() {
-      try {
-        const res = await api.get(`/messages/${userId}`);
-        if (cancelled) return;
-        
-        const newThread = res.data;
-        setThread(newThread);
-        
-        // Init crypto if user has public key
-        if (newThread.user?.publicKey) {
-          try {
-            const priv = await loadPrivateKey();
-            if (priv) {
-              const pub = await importPublicKey(newThread.user.publicKey);
-              const key = await deriveSharedKey(priv, pub);
-              setSharedKey(key);
-              
-              // Decrypt existing encrypted messages
-              decryptThreadMessages(newThread.messages, key);
-            }
-          } catch (err) {
-            console.error('Failed to initialize E2E keys', err);
-          }
-        }
-      } catch (err) {
-        if (!cancelled) setThreadError(err.response?.data?.message || 'Failed to load conversation');
-      }
-    }
-    load();
-    const id = setInterval(load, 5000);
-    return () => { cancelled = true; clearInterval(id); };
+    api.get(`/messages/${userId}`)
+      .then(res => setThread(res.data))
+      .catch(err => setThreadError(err.response?.data?.message || 'Failed to load conversation'));
   }, [userId]);
-  
-  // Also decrypt when thread is updated by polling
-  useEffect(() => {
-    if (thread && thread.messages && sharedKey) {
-      decryptThreadMessages(thread.messages, sharedKey);
-    }
-  }, [thread, sharedKey]);
-
-  async function decryptThreadMessages(messages, key) {
-    const newDecrypted = { ...decryptedMessages };
-    let changed = false;
-    
-    for (const m of messages) {
-      if (m.encrypted && !newDecrypted[m._id]) {
-        try {
-          const pt = await decryptMessage(key, m.iv, m.text);
-          newDecrypted[m._id] = pt;
-          changed = true;
-        } catch (e) {
-          console.error('Decryption failed for msg', m._id, e);
-          newDecrypted[m._id] = '[Decryption Failed]';
-          changed = true;
-        }
-      }
-    }
-    if (changed) {
-      setDecryptedMessages(newDecrypted);
-    }
-  }
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -141,28 +103,10 @@ export default function Messages() {
     if (!trimmed || sending || !userId) return;
     setSending(true);
     try {
-      let payload = { text: trimmed };
-      
-      // E2E Encrypt if sharedKey is available
-      if (sharedKey && thread?.user?.publicKey) {
-        const { iv, ciphertext } = await encryptMessage(sharedKey, trimmed);
-        payload = {
-          text: ciphertext,
-          iv: iv,
-          encrypted: true
-        };
-      }
-      
-      const res = await api.post(`/messages/${userId}`, payload);
+      const res = await api.post(`/messages/${userId}`, { text: trimmed });
       setText('');
-      
       const newMsg = res.data.message;
-      setThread((prev) => prev ? { ...prev, messages: [...prev.messages, newMsg] } : prev);
-      
-      if (newMsg.encrypted) {
-        setDecryptedMessages(prev => ({ ...prev, [newMsg._id]: trimmed }));
-      }
-      
+      setThread(prev => prev ? { ...prev, messages: [...prev.messages, newMsg] } : prev);
       loadConversations();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to send');
@@ -205,7 +149,7 @@ export default function Messages() {
                       <div className="conv-name">{c.user.name}</div>
                       <div className="conv-preview">
                         {c.lastMessage.mine && 'You: '}
-                        {c.lastMessage.encrypted ? '🔒 Encrypted Message' : c.lastMessage.text}
+                        {c.lastMessage.text}
                       </div>
                     </div>
                     {c.unread > 0 && <span className="conv-unread-dot" aria-label={`${c.unread} unread`} />}
@@ -257,19 +201,12 @@ export default function Messages() {
                 <div>
                   <div className="chat-name">
                     <Link to={`/users/${thread.user._id}`}>{thread.user.name}</Link>
-                    {sharedKey && <span className="e2e-badge" title="End-to-End Encrypted">🔒 E2E</span>}
                   </div>
                   {!thread.canMessage && (
                     <div className="muted text-xs">Not a mutual follow</div>
                   )}
                 </div>
               </div>
-              
-              {sharedKey && (
-                <div className="e2e-info">
-                  Messages in this conversation are end-to-end encrypted.
-                </div>
-              )}
 
               <div className="chat-messages">
                 {thread.messages.length === 0 && (
@@ -277,18 +214,12 @@ export default function Messages() {
                     <p className="muted">No messages yet. Say hi!</p>
                   </div>
                 )}
-                {thread.messages.map((m) => {
-                  const displayMessage = m.encrypted 
-                    ? (decryptedMessages[m._id] || '🔒 Decrypting...') 
-                    : m.text;
-                    
-                  return (
-                    <div key={m._id} className={`chat-bubble ${m.mine ? 'mine' : 'theirs'}`}>
-                      {displayMessage}
-                      <span className="chat-bubble-time">{formatTime(m.createdAt)}</span>
-                    </div>
-                  );
-                })}
+                {thread.messages.map((m) => (
+                  <div key={m._id} className={`chat-bubble ${m.mine ? 'mine' : 'theirs'}`}>
+                    {m.encrypted ? '[Encrypted message]' : m.text}
+                    <span className="chat-bubble-time">{formatTime(m.createdAt)}</span>
+                  </div>
+                ))}
                 <div ref={messagesEndRef} />
               </div>
 

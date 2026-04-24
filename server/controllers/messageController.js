@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Message from '../models/Message.js';
 import User from '../models/User.js';
+import { getIO } from '../socket.js';
 
 async function isMutualFollow(meId, otherId) {
   const me = await User.findById(meId, 'following');
@@ -134,19 +135,19 @@ export async function sendMessage(req, res) {
   }
 
   const msg = await Message.create({ from: req.user._id, to: otherId, text, encrypted, iv });
-  res.status(201).json({
-    message: {
-      _id: msg._id,
-      text: msg.text,
-      encrypted: msg.encrypted,
-      iv: msg.iv,
-      from: msg.from,
-      to: msg.to,
-      createdAt: msg.createdAt,
-      readAt: msg.readAt,
-      mine: true,
-    },
-  });
+
+  const payload = {
+    _id: msg._id,
+    text: msg.text,
+    encrypted: msg.encrypted,
+    from: msg.from,
+    to: msg.to,
+    createdAt: msg.createdAt,
+    readAt: msg.readAt,
+  };
+  getIO()?.to(`user:${otherId}`).emit('new_message', { ...payload, mine: false });
+
+  res.status(201).json({ message: { ...payload, mine: true } });
 }
 
 export async function unreadCount(req, res) {

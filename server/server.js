@@ -2,8 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
+import { initSocket } from './socket.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import sessionRoutes from './routes/sessions.js';
@@ -18,9 +20,11 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+const httpServer = createServer(app);
 
 const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
 app.use(cors({ origin: allowedOrigin, credentials: true }));
+initSocket(httpServer, allowedOrigin);
 app.use(express.json({ limit: '2mb' }));
 
 // Serve uploaded files
@@ -49,7 +53,7 @@ const PORT = process.env.PORT || 5000;
 
 connectDB()
   .then(() => {
-    app.listen(PORT, () => console.log(`API running on port ${PORT}`));
+    httpServer.listen(PORT, () => console.log(`API running on port ${PORT}`));
   })
   .catch((err) => {
     console.error('Failed to connect to MongoDB:', err.message);
